@@ -1,0 +1,43 @@
+{
+  "name": "webpack-dev-runner",
+  "version": "1.0.0",
+  "description": "Server-side counterpart to webpack-dev-server. Takes a webpack configuration, watches for code changes, and automatically (re)builds and (re)starts your service bundle.",
+  "bin": {
+    "webpack-dev-runner": "bin/webpack-dev-runner.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=4.3.0 <5.0.0 || >=5.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samuel-h-r-nunes/webpack-dev-runner.git"
+  },
+  "keywords": [
+    "webpack",
+    "webpack-dev-server",
+    "hot reloading",
+    "hmr",
+    "watcher",
+    "service",
+    "ssr",
+    "server side rendering",
+    "development",
+    "dev"
+  ],
+  "author": "Samuel Nunes <samuel.h.r.nunes@gmail.com> (https://github.com/samuel-h-r-nunes)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/samuel-h-r-nunes/webpack-dev-runner/issues"
+  },
+  "homepage": "https://github.com/samuel-h-r-nunes/webpack-dev-runner#readme",
+  "peerDependencies": {
+    "webpack": "^3.0.0 || ^4.0.0-alpha || ^4.0.0-beta || ^4.0.0"
+  },
+  "dependencies": {
+    "chalk": "^2.3.1",
+    "yargs": "^11.0.0"
+  }
+}

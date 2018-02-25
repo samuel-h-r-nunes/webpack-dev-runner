@@ -1,3 +1,5 @@
+# See https://git-scm.com/docs/gitignore for more about ignoring files.
+
 # Logs
 logs
 *.log
@@ -29,8 +31,9 @@ bower_components
 # node-waf configuration
 .lock-wscript
 
-# Compiled binary addons (http://nodejs.org/api/addons.html)
-build/Release
+# Compiled pruduction files (inc. binary addons - http://nodejs.org/api/addons.html)
+build/*
+!build/.keep
 
 # Dependency directories
 node_modules/
@@ -57,3 +60,5 @@ typings/
 # dotenv environment variables file
 .env
 
+# System files
+.DS_Store
