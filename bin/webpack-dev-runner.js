@@ -3,7 +3,6 @@
 
 const chalk    = require('chalk')
 const cluster  = require('cluster')
-const MemoryFS = require('memory-fs')
 const path     = require('path')
 const webpack  = require('webpack')
 const yargs    = require('yargs')
@@ -35,10 +34,6 @@ let valid          = false
 const options  = require(path.resolve(process.cwd(), filename))
 const compiler = webpack(options)
 
-// Compile in memory only
-// var fs                    = new MemoryFS()
-// compiler.outputFileSystem = fs
-
 // Create compiler plugins to keep track of whether the bundle is valid
 function invalidPlugin() {
     valid = false
@@ -47,14 +42,14 @@ function invalidAsyncPlugin(compiler, callback) {
     invalidPlugin()
     callback()
 }
-compiler.plugin("invalid", invalidPlugin)
-compiler.plugin("watch-run", invalidAsyncPlugin)
-compiler.plugin("run", invalidAsyncPlugin)
+compiler.plugin('invalid', invalidPlugin)
+compiler.plugin('watch-run', invalidAsyncPlugin)
+compiler.plugin('run', invalidAsyncPlugin)
 
 // call run on the compiler along with the callback
 compiler.watch({
     aggregateTimeout: 300,
-    ignored:          'build/*'
+    ignored:          /(node_modules|build|dist)/
 }, (err, stats) => {
     valid = true
     process.nextTick(function () {
