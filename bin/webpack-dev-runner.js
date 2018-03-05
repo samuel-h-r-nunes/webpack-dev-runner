@@ -18,7 +18,7 @@ if (yargs.argv.dev) {
 }
 
 // Prettify console output
-const configName    = extractConfigName(filename)
+const configName    = yargs.argv.name || extractConfigName(filename)
 const logPrefix     = colors
     ? chalk.gray(`[devRunner:${chalk.blue(configName)}]`)
     : `[devRunner:${configName}]`

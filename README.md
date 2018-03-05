@@ -7,18 +7,21 @@ Command line tool which takes a webpack configuration, watches for code changes,
 ```bash
 webpack-dev-runner --config <config-file> [options]
 ```
+
 ```bash
 webpack-dev-runner --version
 ```
+
 ```bash
 webpack-dev-runner --help
 ```
 
-| Options |||
+| Options                 | Type                  | Description |
 --------------------------|-----------------------|---------------------------------------
 `--config`                | [string] [required]   | Path to the webpack configuration file.
 `--delay`                 | [number] [default: 0] | Delay (re)starting the bundle process by a specified number of milliseconds after it was built.
 `--dev`,                  | [boolean]             | Force development environment, i.e.: `NODE_ENV = 'development'`.
+`--name`                  | [string]              | Process name to display in console output. When omitted, the display name will be generated from the configuration file name, by removing redundant parts like `webpack`, `config`, `js`, etc. If all parts are redundant, `default` is used.
 `--colors`, `--color`     | [boolean]             | Enable usage of colors on the console.
 `--display-error-details` | [boolean]             | Display details about errors.
 `-h`, `--help`            | [boolean]             | Show help.
@@ -28,7 +31,7 @@ webpack-dev-runner --help
 
 `webpack-dev-runner` is a simple script that takes a webpack configuration and makes use of the webpack Node API to [watch](https://webpack.js.org/configuration/watch) for code changes.
 
-Then it makes use of the Node [Cluster API](https://nodejs.org/dist/latest-v8.x/docs/api/cluster.html) to run the built bundle as a separate process. Process lifetime is controlled using `cluster.setupMaster()`, `cluster.fork()` and `worker.kill()` (using the default `SIGTERM` signal). Whenever a new bundle is built, the previous process is replaced by a new one running the new bundle.
+Then it makes use of the Node [Cluster API](https://nodejs.org/dist/latest-v8.x/docs/api/cluster.html) to run the built bundle as a separate process. Process lifetime is controlled using `cluster.setupMaster()`, `cluster.fork()` and `worker.kill()` (using the default `SIGTERM` signal). Whenever a new bundle is built, the previous process is killed and replaced by a new one running the new bundle.
 
 Despite its simplicity, this is very useful in development as it allows you to keep an “always up to date” version of your server side script running, similar to what can be achieved with `webpack-dev-server` for the client-side.
 
@@ -46,4 +49,4 @@ Please keep in mind that `webpack-dev-runner` is **not able to**:
 
 ## Disclaimer
 
-Despite its name, `webpack-dev-runner` is not part of the [webpack](https://webpack.js.org) project or any of its sub-projects, or afilliated with it in any manner. The choice of name was motivated solely on having the most descriptive name for what it does, and self-justified by the realisation that so many other projects in the ecosystem name themselves after the tools that they use internally. The motivation for publishing this package is that of sharing with the community, so if you feel that I have misrepresented your project or caused harm in any way, please let me know ASAP and I will be happy to change its name or this description on request.
+Despite its name, `webpack-dev-runner` is not part of the [webpack](https://webpack.js.org) project or any of its sub-projects, or affiliated with it in any manner. The choice of name was motivated solely on being descriptive for what it does, and follows the trend set by so many other projects in the ecosystem that name themselves after the tools they use internally. This package is published in good faith with the goal of sharing with the community. If you feel that `webpack-dev-runner` is misrepresenting your project or causing harm in any way, please let me know and I will be happy to change its name or this description on request.

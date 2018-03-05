@@ -35,6 +35,12 @@ module.exports = function (yargs) {
                 group:    CONFIG_GROUP,
                 describe: 'Force environment (NODE_ENV = "development")'
             },
+            'name': {
+                type:        'string',
+                requiresArg: true,
+                describe:    'Process name to display in console output',
+                group:       DISPLAY_GROUP
+            },
             'colors': {
                 type:     'boolean',
                 alias:    'color',

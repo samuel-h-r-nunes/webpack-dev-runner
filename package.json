@@ -1,6 +1,6 @@
 {
   "name": "webpack-dev-runner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Command line tool which takes a webpack configuration, watches for code changes, and automatically (re)builds and (re)starts your service bundle.",
   "bin": {
     "webpack-dev-runner": "bin/webpack-dev-runner.js"
