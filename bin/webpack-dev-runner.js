@@ -1,11 +1,11 @@
 #! /usr/bin/env node
 'use strict'
 
-const chalk    = require('chalk')
-const cluster  = require('cluster')
-const path     = require('path')
-const webpack  = require('webpack')
-const yargs    = require('yargs')
+const cluster           = require('cluster')
+const path              = require('path')
+const webpack           = require('webpack')
+const yargs             = require('yargs')
+const addCompilerPlugin = require('./add-compiler-plugin')
 
 // Configuration
 require('./config-yargs')(yargs)
@@ -17,13 +17,11 @@ if (yargs.argv.dev) {
     process.env = Object.assign({}, process.env, { NODE_ENV: 'development' })
 }
 
-// Prettify console output
-const configName    = yargs.argv.name || extractConfigName(filename)
-const logPrefix     = colors
-    ? chalk.gray(`[devRunner:${chalk.blue(configName)}]`)
-    : `[devRunner:${configName}]`
-const warningPrefix = logPrefix + ' ' + (colors ? chalk.yellow('WRN!') : 'WRN!')
-const errorPrefix   = logPrefix + ' ' + (colors ? chalk.red('ERR!') : 'ERR!')
+// Setup console output
+const { error, output, warning } = require('./output')(
+    yargs.argv.name || extractConfigName(filename),
+    colors
+)
 
 // Control variables
 let bundleProcess  = null
@@ -31,20 +29,18 @@ let currentBuildNo = 0
 let valid          = false
 
 // Create a new compiler with the specified configuration
-const options  = require(path.resolve(process.cwd(), filename))
+const options  = parseConfiguration(filename)
 const compiler = webpack(options)
 
 // Create compiler plugins to keep track of whether the bundle is valid
-function invalidPlugin() {
+function invalidPlugin () {
     valid = false
 }
-function invalidAsyncPlugin(compiler, callback) {
+addCompilerPlugin(compiler, 'invalid', invalidPlugin)
+addCompilerPlugin(compiler, ['watch-run', 'run'], (compiler, callback) => {
     invalidPlugin()
     callback()
-}
-compiler.plugin('invalid', invalidPlugin)
-compiler.plugin('watch-run', invalidAsyncPlugin)
-compiler.plugin('run', invalidAsyncPlugin)
+})
 
 // call run on the compiler along with the callback
 compiler.watch({
@@ -53,24 +49,16 @@ compiler.watch({
 }, (err, stats) => {
     valid = true
     process.nextTick(function () {
-        // Silently discard the bundle if it became invalid meanwhile
-        if (!valid) {
+        // Discard bundle if it became invalid meanwhile or if there are errors
+        if (!valid || !checkErrors(err)) {
             return
         }
 
-        // Check for errors and discard the bundle if needed
-        if (!handleErrors(err, stats)) {
-            return
-        }
+        // Write the built stats to the console
+        output('Build complete:', buildOutput(stats))
 
-        // Finally, we have a valid bundle so we can proceed
+        // Finally, proceed with executing the bundle
         currentBuildNo++
-        console.log(
-            logPrefix,
-            'Build complete:\n\n',
-            stats.toString({colors, errorDetails}),
-            '\n'
-        )
         const bundlePath = path.resolve(
             options.output.path,
             options.output.filename
@@ -84,6 +72,57 @@ compiler.watch({
 /*****************************************************************************/
 
 /**
+ * Build an output string for the compilation stats, including warnings and errors.
+ *
+ * For reference, please see: https://webpack.js.org/api/node#stats-tostring-options-
+ *
+ * @param   {Object} stats Compilation result stats object.
+ * @returns {String} Returns a formatted text string for console output.
+ */
+function buildOutput (stats) {
+    const info = stats.toJson({ errorDetails })
+    let output = stats.toString({
+        warnings: false,
+        errors:   false,
+        colors
+    });
+
+    // Compilation errors (missing modules, syntax errors, etc)
+    if (stats.hasErrors()) {
+        output += '\n\n' + error.prepare('in ' + info.errors)
+    }
+
+    // Compilation warnings
+    if (stats.hasWarnings()) {
+        output += '\n\n' + warning.prepare('in ' + info.warnings)
+    }
+
+    return output
+}
+
+/**
+ * Check for fatal webpack errors (e.g. configuration), and inform whether the
+ * generated build is valid.
+ *
+ * For reference, please see: https://webpack.js.org/api/node#error-handling
+ *
+ * @param   {Object}  err Error object, contain webpack-related issues.
+ * @returns {Boolean} Returns true if the build should be considered valid, or
+ *                    false otherwise.
+ */
+function checkErrors (err) {
+    // Fatal webpack errors (wrong configuration, etc)
+    if (err) {
+        error(err.stack || err)
+        if (err.details) {
+            error(err.details)
+        }
+        return false
+    }
+    return true
+}
+
+/**
  * Execute the specified bundle.
  *
  * @param {String} filePath Path to the bundle file.
@@ -91,15 +130,51 @@ compiler.watch({
 function executeBundle (filePath) {
     // Kill previous process
     if (bundleProcess) {
-        console.log(logPrefix, 'Replacing running process...\n')
+        output('Replacing running process...\n')
         bundleProcess.kill()
     } else {
-        console.log(logPrefix, 'Starting process...\n')
+        output('Starting process...\n')
     }
 
     // Execute bundle as a new process
     cluster.setupMaster({ exec: filePath })
     bundleProcess = cluster.fork(process.env)
+}
+
+/**
+ * Retrieve and validate the specified webpack configuration. On error, the
+ * runner will be terminated.
+ *
+ * @param   {String} filePath Path to the target webpack configuration file.
+ * @returns {Object} Returns a data object containing the loaded webpack
+ *                   configuration.
+ */
+function parseConfiguration (filePath) {
+    const configuration = require(path.resolve(process.cwd(), filePath))
+    let errors          = []
+
+    if (!configuration.output) {
+        errors.push('Output configuration is missing')
+    } else {
+        if (!configuration.output.path) {
+            errors.push('Output path is missing')
+        }
+        if (!configuration.output.filename) {
+            errors.push('Output filename is missing')
+        }
+        else if (/[\[\]]/.test(configuration.output.filename)) {
+            errors.push(
+                'Output filename must not contain substitutions (e.g. `[name]`, `[hash]`, etc.)'
+            )
+        }
+    }
+
+    if (errors.length) {
+        error('Aborted due to unmet configuration restrictions:', errors)
+        process.exit(1);
+    }
+
+    return configuration;
 }
 
 /**
@@ -152,40 +227,4 @@ function extractConfigName (filePath) {
         result = 'default'
     }
     return result
-}
-
-/**
- * Handle display of compilation errors, and inform whether the generated build
- * is valid.
- *
- * For reference, please see: http://devdocs.io/webpack/api/node#error-handling
- *
- * @param   {Object}  err   Error object, contain webpack-related issues.
- * @param   {Object}  stats Compilation result stats object.
- * @returns {Boolean} Returns true if the build should be considered valid, or
- *                    false otherwise.
- */
-function handleErrors (err, stats) {
-    // Fatal webpack errors (wrong configuration, etc)
-    if (err) {
-        console.error(errorPrefix, err.stack || err)
-        if (err.details) {
-            console.error(errorPrefix, err.details)
-        }
-        return false
-    }
-
-    const info = stats.toJson()
-
-    // Compilation errors (missing modules, syntax errors, etc)
-    if (stats.hasErrors()) {
-        console.error(errorPrefix, info.errors)
-    }
-
-    // Compilation warnings
-    if (stats.hasWarnings()) {
-        console.warn(warningPrefix, info.warnings)
-    }
-
-    return true
 }
